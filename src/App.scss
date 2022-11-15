@@ -1,0 +1,38 @@
+.App{
+
+    section {
+        padding: 20px 30px 0;
+        color: white;
+        font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+
+        form {
+            input, button, textarea, select {
+                display: block;
+                width: 422px;
+                height: 40px;
+                padding: 0;
+                font-size: 20px;
+                border: 0;
+                margin-bottom: 20px;
+            }
+
+            label {
+                font-size: 20px;
+            }
+        }
+
+        article {
+            border: 1px solid white;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            padding: 10px;
+            width: 400px;
+
+            .reactionButton {
+                background: none;
+                border: none;
+                // margin: 0 auto;
+            }
+        }
+    }
+}
