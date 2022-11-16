@@ -9,7 +9,7 @@ const EditPostForm = () => {
     const { postId } = useParams()
     const navigate = useNavigate()
 
-    const post = useSelector((state) => selectPostById(state, Number(postId)))
+    const post = useSelector(state => selectPostById(state, Number(postId)))
     const users = useSelector(selectAllUsers)
 
     const [title, setTitle] = useState(post?.title)
@@ -29,7 +29,7 @@ const EditPostForm = () => {
 
     const onTitleChanged = e => setTitle(e.target.value)
     const onContentChanged = e => setContent(e.target.value)
-    const onAuthorChanged = e => setUserId(e.target.value)
+    const onAuthorChanged = e => setUserId(Number(e.target.value))
 
     const canSave = [title, content, userId].every(Boolean) && requestStatus === 'idle'
 

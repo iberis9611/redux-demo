@@ -1,15 +1,26 @@
-import { createSlice, nanoid, createAsyncThunk } from "@reduxjs/toolkit";
+import { 
+    createSlice, 
+    createAsyncThunk, 
+    createSelector,
+    createEntityAdapter 
+} from "@reduxjs/toolkit";
 import { sub } from "date-fns";
 import axios from 'axios';
+
 const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts'
 
-const initialState = {
-    posts: [],
-    status: 'idle', // idle/ loading/ succeeded/ failed
-    error: null
-}
+const postsAdapter = createEntityAdapter({
+    sortComparer: (a, b) => b.date.localeCompare(a.date)
+})
 
-// "Thunk" is a programming term that means "a piece of code that does some delayed work"
+// We get rid of the empty array "posts" because even we don't put anything else in it, our initial state will 
+// already return that normalized object
+const initialState = postsAdapter.getInitialState({
+    status: 'idle', // idle/ loading/ succeeded/ failed
+    error: null,
+    count: 0
+})
+
 export const fetchPosts = createAsyncThunk('posts/fetchPosts', async () => {
     try {
         const response = await axios.get(POSTS_URL)
@@ -54,36 +65,18 @@ const postsSilce = createSlice({
     initialState,
     reducers: {
         // handle the data we submit
-        postAdded: {
-            reducer(state, action) {
-                // payload is the for m data that we send or we actually dispatch
-                state.posts.push(action.payload)
-            },
-            prepare(title, content, userId) {
-                return {
-                    payload: {
-                        id: nanoid(),
-                        title,
-                        content,
-                        date: new Date().toISOString(),
-                        userId,
-                        reactions: {
-                            thumbsUp: 0,
-                            wow: 0,
-                            heart: 0,
-                            rocket: 0,
-                            coffee: 0
-                        }
-                    }
-                }
-            }
-        },
         reactionAdded(state, action) {
             const { postId, reaction } = action.payload
-            const existingPost = state.posts.find(post => post.id === postId)
+            const existingPost = state.entities[postId]
             if (existingPost) {
                 existingPost.reactions[reaction]++
             }
+        },
+        // Why do we add a counter?
+        // To get sth that's completely not a reference to what we have in the other component and out of the way.
+        // To show one can impact the other if you do not apply the optimization correctly.
+        increaseCount(state, action) {
+            state.count = state.count + 1
         }
     },
     // However, there are times when a slice reducer needs to respond to other actions that weren't defined as part 
@@ -113,7 +106,7 @@ const postsSilce = createSlice({
                 });
 
                 // Add any fetched posts to the array
-                state.posts = state.posts.concat(loadedPosts)
+                postsAdapter.upsertMany(state, loadedPosts)
             })
             .addCase(fetchPosts.rejected, (state, action) => {
                 state.status = 'failed'
@@ -130,7 +123,7 @@ const postsSilce = createSlice({
                     coffee: 0
                 }
                 console.log(action.payload)
-                state.posts.push(action.payload)
+                postsAdapter.addOne(state, action.payload)
             })
             .addCase(updatePost.fulfilled, (state, action) => {
                 // if the payload does not have the id property
@@ -139,11 +132,8 @@ const postsSilce = createSlice({
                     console.log(action.payload)
                     return
                 } 
-                const { id } = action.payload
                 action.payload.date = new Date().toISOString()
-                // Filtering out the previous posts with the same id
-                const posts = state.posts.filter(post => post.id !== id)
-                state.posts = [...posts, action.payload]
+                postsAdapter.upsertOne(state, action.payload)
             })
             .addCase(deletePost.fulfilled, (state, action) => {
                 if (!action.payload?.id) {
@@ -152,19 +142,29 @@ const postsSilce = createSlice({
                     return
                 }
                 const { id } = action.payload
-                const posts = state.posts.filter(post => post.id !== id)
-                state.posts = posts         
+                postsAdapter.removeOne(state, id)
             })
     }
-});
+})
+
+// getSelectors creates these selectors and we rename them with aliases using destructuring
+export const {
+    selectAll: selectAllPosts,
+    selectById: selectPostById,
+    selectIds: selectPostIds
+    // Pass in a selector that returns the posts slice of state
+} = postsAdapter.getSelectors(state => state.posts)
 
 // we have an object and we also have a name 'posts' inside out slice, so we have state.posts.posts
-export const selectAllPosts = (state) => state.posts.posts;
 export const getPostsStatus = (state) => state.posts.status;
 export const getPostsError = (state) => state.posts.error;
+export const getCount = (state) => state.posts.count;
 
-export const selectPostById = (state, postId) => state.posts.posts.find(post => post.id === postId);
+export const selectPostsByUser = createSelector(
+    [selectAllPosts, (state, userId) => userId],
+    (posts, userId) => posts.filter(post => post.userId === userId)
+)
 
-export const { postAdded, reactionAdded } = postsSilce.actions;
+export const { increaseCount, reactionAdded } = postsSilce.actions;
 
 export default postsSilce.reducer;

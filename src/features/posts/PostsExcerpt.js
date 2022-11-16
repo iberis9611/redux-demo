@@ -2,8 +2,11 @@ import PostAuthor from "./PostAuthor";
 import TimeAgo from "./TimeAgo";
 import ReactionButtons from "./ReactionButtons";
 import { Link } from "react-router-dom";
+import { selectPostById } from './postsSlice'
+import { useSelector } from "react-redux";
 
-const PostsExcerpt = ({ post }) => {
+let PostsExcerpt = ({ postId }) => {
+  const post = useSelector(state => selectPostById(state, postId))
   return (
     <article>
         <h2>{post.title}</h2>
@@ -17,5 +20,8 @@ const PostsExcerpt = ({ post }) => {
     </article>
   )
 }
+
+// It allows the component not to rerender if the post it receives does not change. But it's recommended to use normalized data.
+// PostsExcerpt = React.memo(PostsExcerpt)
 
 export default PostsExcerpt
